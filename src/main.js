@@ -5,6 +5,7 @@ import store from './store'
 
 Vue.config.productionTip = false
 
+//gitbub test
 new Vue({
   router,
   store,
