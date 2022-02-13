@@ -2,6 +2,7 @@
   <div id="home">
     <nav-bar class="home-nav"><div slot="center">购物车</div></nav-bar>
     <Wrapper :cimgs="banners"/>
+    <RecommendView :recommends="recommends"/>
   </div>
 </template>
 
