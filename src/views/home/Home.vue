@@ -3,10 +3,19 @@
     <nav-bar class="home-nav">
       <div slot="center">购物车</div>
     </nav-bar>
-    <Wrapper :cimgs="banners" />
-    <RecommendView :recommends="recommends" />
-    <TabControl @tabClick="tabClick" :titles="titles" class="tab-control" />
-    <goods-list :goods="showGoods" />
+    <scroll
+      :probeType='3'
+      :pullUpLoad='true'
+      class="content"
+      ref="scroll"
+      @scroll="contentScroll"
+      @pullingUp="loadMore">
+      <Wrapper :cimgs="banners" />
+      <RecommendView :recommends="recommends" />
+      <TabControl @tabClick="tabClick" :titles="titles" />
+      <goods-list :goods="showGoods" />
+    </scroll>
+    <back-top @click.native="backClick" v-show="isShowBackTop"/>
   </div>
 </template>
 
@@ -20,14 +29,20 @@ import GoodsList from "components/content/goods/GoodsList";
 
 import { getHomeMultidata, getHomeGoods } from "network/home";
 
+import Scroll from 'components/common/scroll/Scroll'
+import BackTop from 'components/content/backTop/BackTop'
+import { debounce } from 'common/utils'
+
 export default {
   name: "Home",
   components: {
-    RecommendView,
     NavBar,
+    RecommendView,
     Wrapper,
     TabControl,
-    GoodsList
+    GoodsList,
+    Scroll,
+    BackTop
   },
   data() {
     return {
@@ -39,7 +54,9 @@ export default {
         new: { page: 0, list: [] },
         sell: { page: 0, list: [] }
       },
-      currentType: 'pop'
+      currentType: 'pop',
+      isShowBackTop: false,
+      tabOffsetTop: 0
     };
   },
   computed: {
@@ -56,7 +73,31 @@ export default {
     this.getHomeGoods("new");
     this.getHomeGoods("sell");
   },
+  mounted() {
+    // 3、监听item中图片加载完成
+    const refresh = debounce(this.$refs.scroll.refresh,200)
+
+    this.$bus.$on('loadImg', () => {
+      // console.log('................')
+      refresh()
+    })
+  },
   methods: {
+    backClick() {
+      /**
+       * 1、this.$refs.scroll 获取scroll组件对象，
+       * 2、this.$refs.scroll.newScrollTo 获取scroll组件对象的方法newScrollTo
+       */
+      this.$refs.scroll.newScrollTo(0, 0,500)
+    },
+    contentScroll(position) {
+      this.isShowBackTop = -position.y > 1000 ? true : false
+    },
+    loadMore(){
+      // console.log ('ddd')
+      this.getHomeGoods(this.currentType)
+    },
+
     /**
      * 网络请求相关的方法
      */
@@ -79,6 +120,9 @@ export default {
           // console.log(resList);
           this.goods[type].list.push(...resList);
           this.goods[type].page += 1;
+
+          // 结束加载更多，便于下次再加载
+          this.$refs.scroll.finishPullUp()
         })
         .catch(err => {
           console.log(err);
@@ -100,7 +144,7 @@ export default {
           this.currentType='sell'
           break
       }
-    }
+    },
   }
 };
 </script>
@@ -108,6 +152,7 @@ export default {
 <style scoped>
 #home {
   padding-top: 44px;
+  height: 100vh;
 }
 .home-nav {
   background-color: var(--color-tint);
@@ -117,11 +162,13 @@ export default {
   left: 0;
   right: 0;
   top: 0;
-  z-index: 99;
-}
-.tab-control {
-  position: sticky;
-  top: 44px;
   z-index: 9;
 }
+
+.content {
+  height: calc(100% - 49px);
+  overflow: hidden;
+  /* margin-top: 44px; */
+}
+
 </style>
